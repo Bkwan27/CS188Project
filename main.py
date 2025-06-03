@@ -108,9 +108,11 @@ print("Testing trained model...")
 obs = vec_env.reset()
 for i in range(1000):
     action, _states = model.predict(obs, deterministic=True)
-    obs, rewards, dones, info = vec_env.step(action)
+    obs, reward, dones, info = vec_env.step(action)
     if dones[0]:
         print(f"Episode finished at step {i}")
         obs = vec_env.reset()
+        if reward == 40.0:
+            print(f'Task finished successfully at step {i}')
     if i % 10 == 0:
-        print(f"Step {i}, Reward: {rewards[0]}")
+        print(f"Step {i}, Reward: {reward}")
