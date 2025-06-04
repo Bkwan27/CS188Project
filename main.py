@@ -159,12 +159,7 @@ model = PPO("MlpPolicy", vec_env, verbose=1, learning_rate=3e-4, tensorboard_log
 
 callback = RewardPrinter()
 print("Training PPO on Lift environment...")
-training_start = time.time()
 
-model.learn(total_timesteps=1000)
-
-training_time = time.time() - training_start
-print(f"Training completed in {training_time:.2f} seconds")
 
 model.learn(total_timesteps=500000, callback=callback)
 model.save("ppo_lift")
