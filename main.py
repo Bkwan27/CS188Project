@@ -27,7 +27,7 @@ def make_lift_env():
     env = suite.make(
         env_name="Lift", 
         robots="Panda",  
-        has_renderer=True,
+        has_renderer=False,
         has_offscreen_renderer=False,
         use_camera_obs=False,
         use_object_obs=True,
@@ -41,7 +41,7 @@ def make_lift_env():
     
     return gym_env
 
-num_env = 1
+num_env = 4
 vec_env = DummyVecEnv([make_lift_env for _ in range(num_env)])
 # model = PPO("MlpPolicy", vec_env, verbose=1, learning_rate=0.1, tensorboard_log="./ppo_lift_tb/")
 
