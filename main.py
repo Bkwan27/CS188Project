@@ -12,6 +12,7 @@ from stable_baselines3.common.callbacks import BaseCallback
 import numpy as np
 
 # 4yQo6f3Z
+# .\venv\Scripts\Activate.ps1
 
 class RewardPrinter(BaseCallback):
     def _on_step(self) -> bool:

@@ -15,11 +15,14 @@ from env import RewardOverrideWrapper
 from robosuite.wrappers import GymWrapper
 from stable_baselines3.common.vec_env import DummyVecEnv
 
+import numpy as np, sys
+sys.modules['numpy._core'] = np.core
+sys.modules['numpy._core.numeric'] = np.core.numeric
 # --------------------------------------------------------------------
 # 0) (Windows) make sure MuJoCo picks a GUI-capable backend
 #    "glfw" works on Linux/Mac too; use "wgl" if glfw gives a black window
 os.environ.setdefault("MUJOCO_GL", "glfw")
-
+# print("hello")
 # --------------------------------------------------------------------
 # 1) Build *one* Lift env exactly like the training one, but with a viewer
 def make_lift_env(render=True):
@@ -36,9 +39,11 @@ def make_lift_env(render=True):
     )
     #env = Monitor(env)          # <- adds episode reward/length to info dict
     gym_env = GymWrapper(env)
+    gym_env = RewardOverrideWrapper(gym_env)
     return gym_env
 
-vec_env = DummyVecEnv([lambda: make_lift_env(render=True)])
+num_env=1
+vec_env = DummyVecEnv([make_lift_env for _ in range(num_env)])
 
 # --------------------------------------------------------------------
 # 2) Load the policy (no need to pass env when we only want predict)
@@ -74,4 +79,4 @@ try:
 except KeyboardInterrupt:
     print("Interrupted by user.")
 finally:
-    env.close()
+    vec_env.close()

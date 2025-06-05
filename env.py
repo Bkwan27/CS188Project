@@ -70,9 +70,17 @@ class RewardOverrideWrapper(gym.Wrapper):
             # 2) distance shaping
             cube_pos = self.sim.data.body_xpos[self.cube_bid]
             ee_pos   = self.sim.data.site_xpos[self.ee_sid]
-            dist     = np.linalg.norm(ee_pos - cube_pos)
-            reward  += 1.0 - np.tanh(10.0 * dist)
+            dist = np.linalg.norm(ee_pos - cube_pos)
+            if dist < 0.02:
+                reward += 0.5
+            if prev_info:
+                rel_dist = np.clip(prev_info["ee_dist"] - dist, -0.05, 0.05)
 
+                rel_dist = prev_info["ee_dist"] - dist
+                reward += 10 * rel_dist
+            else:
+                reward -= 0.1 * dist
+            info['ee_dist'] = float(dist)
             # 3) gripper gating
             in_window   = self.in_grasp_window()
             # grip_ctrl   = self.sim.data.ctrl[self.gripper_act_ids]
@@ -114,7 +122,7 @@ class RewardOverrideWrapper(gym.Wrapper):
                 height   = cube_z - self._table_top_z
                 prev_h   = prev_info.get("cube_height", 0.0) if prev_info else 0.0
                 reward += 2 * max(0.0, height - prev_h)            # only reward upward motion
-
+        reward -= 0.01
         return reward * self.reward_scale / 2.25
 
     # --------------------------------------------------------------
