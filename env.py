@@ -108,6 +108,13 @@ class RewardOverrideWrapper(gym.Wrapper):
             if in_window and not grasping:
                 reward -= 0.05
 
+            # reward lifting up cube
+            if grasping:
+                cube_z   = float(self.sim.data.body_xpos[self.cube_bid][2])
+                height   = cube_z - self._table_top_z
+                prev_h   = prev_info.get("cube_height", 0.0) if prev_info else 0.0
+                reward += 2 * max(0.0, height - prev_h)            # only reward upward motion
+
         return reward * self.reward_scale / 2.25
 
     # --------------------------------------------------------------
