@@ -40,7 +40,7 @@ class RewardOverrideWrapper(gym.Wrapper):
     # --------------------------------------------------------------
     # helper: EE is above cube and aligned
     def in_grasp_window(
-        self, xy_thresh=0.05, z_low=0.01, z_high=0.05, ori_thresh=0.8
+        self, xy_thresh=0.02, z_low=0.01, z_high=0.05, ori_thresh=0.9
     ) -> bool:
         cube_pos = self.sim.data.body_xpos[self.cube_bid]
         ee_pos   = self.sim.data.site_xpos[self.ee_sid]
@@ -72,13 +72,13 @@ class RewardOverrideWrapper(gym.Wrapper):
             ee_pos   = self.sim.data.site_xpos[self.ee_sid]
             dist = np.linalg.norm(ee_pos - cube_pos)
             #print(dist)
-            if dist < 0.05:
-                reward += 0.5
+            if dist < 0.02:
+                reward += 0.25
             
             reward += (1 - np.tanh(10.0 * dist))
             info['ee_dist'] = float(dist)
             # 3) gripper gating
-            in_window   = self.in_grasp_window()
+            in_window  = self.in_grasp_window()
             # grip_ctrl   = self.sim.data.ctrl[self.gripper_act_ids]
             # closing_cmd = np.mean(grip_ctrl) < -0.01
 
@@ -113,7 +113,7 @@ class RewardOverrideWrapper(gym.Wrapper):
             if in_window and grasping:
                 reward += 0.75
             if in_window and not grasping:
-                reward -= 0.05
+                reward -= 0.25
 
             # reward lifting up cube
             if grasping:
