@@ -107,7 +107,7 @@ class RewardOverrideWrapper(gym.Wrapper):
             #     if (g1 in self.r_finger_geom_ids and g2 == self.cube_gid) or \
             #        (g2 in self.r_finger_geom_ids and g1 == self.cube_gid):
             #         right = True
-            print(f'Reward: {reward}')
+#            print(f'Reward: {reward}')
             if in_window and grasping:
                 reward += 1
             if in_window and not grasping:
