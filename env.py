@@ -79,13 +79,6 @@ class RewardOverrideWrapper(gym.Wrapper):
             info['ee_dist'] = float(dist)
             # 3) gripper gating
             in_window  = self.in_grasp_window()
-            # grip_ctrl   = self.sim.data.ctrl[self.gripper_act_ids]
-            # closing_cmd = np.mean(grip_ctrl) < -0.01
-
-            # if closing_cmd and not in_window:
-            #     reward -= 0.10            # closing too early
-            # if (not closing_cmd) and in_window:
-            #     reward -= 0.05            # failing to close on target
 
             # 4) contact bonus
             robot = self.env.unwrapped.robots[0]
@@ -97,31 +90,19 @@ class RewardOverrideWrapper(gym.Wrapper):
             for g_group in g_geoms:
                 if not SU.check_contact(sim=self.sim, geoms_1=g_group, geoms_2=self.base.cube):
                     grasping = False
-            # left, right = False, False
-            # for i in range(self.sim.data.ncon):
-            #     c = self.sim.data.contact[i]
-            #     g1, g2 = c.geom1, c.geom2
-            #     if (g1 in self.l_finger_geom_ids and g2 == self.cube_gid) or \
-            #        (g2 in self.l_finger_geom_ids and g1 == self.cube_gid):
-            #         left = True
-            #     if (g1 in self.r_finger_geom_ids and g2 == self.cube_gid) or \
-            #        (g2 in self.r_finger_geom_ids and g1 == self.cube_gid):
-            #         right = True
-            #print(f'Reward: {reward}')
+
             if in_window:
                 reward += 0.5
             if in_window and grasping:
                 reward += 0.75
-            if in_window and not grasping:
-                reward -= 0.25
-
-            # reward lifting up cube
-            if grasping:
                 cube_z   = float(self.sim.data.body_xpos[self.cube_bid][2])
                 height   = cube_z - self._table_top_z
                 prev_h   = prev_info.get("cube_height", 0.0) if prev_info else 0.0
                 info['cube_height'] = height
-                reward += 2 * max(0.0, height - prev_h)            # only reward upward motion
+                reward += 2 * max(0.0, height - prev_h) 
+            if in_window and not grasping:
+                reward -= 0.25
+            # reward lifting up cube
         # reward -= 0.01
         return reward * self.reward_scale / 2.25
 
