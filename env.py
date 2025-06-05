@@ -71,11 +71,11 @@ class RewardOverrideWrapper(gym.Wrapper):
             cube_pos = self.sim.data.body_xpos[self.cube_bid]
             ee_pos   = self.sim.data.site_xpos[self.ee_sid]
             dist = np.linalg.norm(ee_pos - cube_pos)
-            
+            #print(dist)
             if dist < 0.05:
                 reward += 0.5
             
-            reward -= 3 * (dist - 0.05)
+            reward += (1 - np.tanh(10.0 * dist))
             info['ee_dist'] = float(dist)
             # 3) gripper gating
             in_window   = self.in_grasp_window()
@@ -107,9 +107,11 @@ class RewardOverrideWrapper(gym.Wrapper):
             #     if (g1 in self.r_finger_geom_ids and g2 == self.cube_gid) or \
             #        (g2 in self.r_finger_geom_ids and g1 == self.cube_gid):
             #         right = True
-#            print(f'Reward: {reward}')
+            #print(f'Reward: {reward}')
+            if in_window:
+                reward += 0.5
             if in_window and grasping:
-                reward += 1
+                reward += 0.75
             if in_window and not grasping:
                 reward -= 0.05
 
@@ -138,8 +140,9 @@ class RewardOverrideWrapper(gym.Wrapper):
 
         # custom reward
         reward = self._custom_reward(info, self.prev_info)
-        self.prev_info = info
+        
 
         # (optional) expose cube height for logging/debug
         info["cube_height"] = float(self.sim.data.body_xpos[self.cube_bid][2]) - self._table_top_z
+        self.prev_info = info
         return obs, reward, terminated, truncated, info
