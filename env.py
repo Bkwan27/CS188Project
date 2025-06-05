@@ -95,7 +95,7 @@ class RewardOverrideWrapper(gym.Wrapper):
             g_geoms = [gripper.important_geoms["left_fingerpad"], gripper.important_geoms["right_fingerpad"]]
             grasping = True
             for g_group in g_geoms:
-                if not SU.check_contact(sim=self.sim, geoms_1=g_group, geoms_2=None):
+                if not SU.check_contact(sim=self.sim, geoms_1=g_group, geoms_2=self.base.cube):
                     grasping = False
             # left, right = False, False
             # for i in range(self.sim.data.ncon):
