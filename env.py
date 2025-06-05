@@ -75,9 +75,7 @@ class RewardOverrideWrapper(gym.Wrapper):
                 reward += 0.5
             if prev_info:
                 rel_dist = np.clip(prev_info["ee_dist"] - dist, -0.05, 0.05)
-
-                rel_dist = prev_info["ee_dist"] - dist
-                reward += 10 * rel_dist
+                reward += 5 * rel_dist
             else:
                 reward -= 0.1 * dist
             info['ee_dist'] = float(dist)
@@ -121,8 +119,9 @@ class RewardOverrideWrapper(gym.Wrapper):
                 cube_z   = float(self.sim.data.body_xpos[self.cube_bid][2])
                 height   = cube_z - self._table_top_z
                 prev_h   = prev_info.get("cube_height", 0.0) if prev_info else 0.0
+                info['cube_height'] = height
                 reward += 2 * max(0.0, height - prev_h)            # only reward upward motion
-        reward -= 0.01
+        # reward -= 0.01
         return reward * self.reward_scale / 2.25
 
     # --------------------------------------------------------------
