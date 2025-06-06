@@ -1,2 +1,4 @@
-gym
+gymnasium
+stable_baselines3
 h5py
+tensorboard
