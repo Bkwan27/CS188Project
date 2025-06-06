@@ -73,6 +73,15 @@ class RewardOverrideWrapper(gym.Wrapper):
             reward += 10.0
 
         if self.reward_shaping:
+            current_quat = obs["robot0_eef_quat"]
+            dot = float(np.abs(np.dot(current_quat, self.desired_eef_quat)))
+            ORI_THRESH = 0.95
+
+            if dot < ORI_THRESH:
+                # Gripper is too tilted—no reward this step:
+                return 0.0
+            else:
+                reward += 0.25
             # 2) distance shaping
             # cube_pos = self.sim.data.body_xpos[self.cube_bid]
             # ee_pos   = self.sim.data.site_xpos[self.ee_sid]
@@ -107,13 +116,13 @@ class RewardOverrideWrapper(gym.Wrapper):
                     reward += height * LIFT_SCALE
             if in_window and not grasping:
                 reward -= 0.25
-            if in_window and not close_gripper:
-                reward -= 0.05
-            ORI_WEIGHT = 0.1
-            current_quat = obs["robot0_eef_quat"]
-            dot = np.abs(np.dot(current_quat, self.desired_eef_quat))
-            ori_penalty = max(0.0, 1.0 - dot)
-            reward -= ori_penalty * ORI_WEIGHT
+            # if in_window and not close_gripper:
+            #     reward -= 0.05
+            # ORI_WEIGHT = 0.1
+            # current_quat = obs["robot0_eef_quat"]
+            # dot = np.abs(np.dot(current_quat, self.desired_eef_quat))
+            # ori_penalty = max(0.0, 1.0 - dot)
+            # reward -= ori_penalty * ORI_WEIGHT
             # reward lifting up cube
         # reward -= 0.01
         return reward * self.reward_scale / 2.25
