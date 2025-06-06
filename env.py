@@ -16,8 +16,12 @@ class RewardOverrideWrapper(gym.Wrapper):
     # --------------------------------------------------------------
     def __init__(self, env, reward_scale=10, reward_shaping=True):
         super().__init__(env)
-        self.base = self.env.unwrapped                      # raw Lift env
-
+        raw = env
+        while hasattr(raw, "env"):       # e.g. GymWrapper, some VecWrapper, etc.
+            raw = raw.env
+        # At this point, `raw` should be something like a robosuite.environments.lift.Lift instance
+        self.lift_env = raw
+        self.base = self.env.unwrapped
         # ----- cached MuJoCo handles -----
         self.sim   = self.base.sim
         self.cube_bid = self.base.cube_body_id              # cube body id
@@ -58,48 +62,43 @@ class RewardOverrideWrapper(gym.Wrapper):
         return cube_height > self._table_top_z + 0.04     # 4 cm above table
 
     # --------------------------------------------------------------
-    def _custom_reward(self, info, prev_info) -> float:
+    def _custom_reward(self, obs, info, prev_info) -> float:
         self.base = self.env.unwrapped 
         reward = 0.0
 
         # 1) sparse success
-        if self._check_success():
+        cube_z = obs["cube_pos"][2]
+        if cube_z > self._table_top_z + 0.04:
             reward += 1.0
 
         if self.reward_shaping:
             # 2) distance shaping
-            cube_pos = self.sim.data.body_xpos[self.cube_bid]
-            ee_pos   = self.sim.data.site_xpos[self.ee_sid]
+            # cube_pos = self.sim.data.body_xpos[self.cube_bid]
+            # ee_pos   = self.sim.data.site_xpos[self.ee_sid]
+            ee_pos = obs['robot0_eef_pos']
+            cube_pos = obs['cube_pos']
             dist = np.linalg.norm(ee_pos - cube_pos)
             #print(dist)
-            if dist < 0.005:
+            if dist < 0.01:
                 reward += 0.25
             
             reward += (1 - np.tanh(10.0 * dist))
             info['ee_dist'] = float(dist)
             # 3) gripper gating
-            in_window  = self.in_grasp_window()
+            gripper_to_cube = obs["gripper_to_cube_pos"]
+            in_window = np.linalg.norm(gripper_to_cube) < 0.01
 
-            # 4) contact bonus
-            robot = self.env.unwrapped.robots[0]
-            gripper = robot.gripper
-            if isinstance(gripper, dict):          # {'right': PandaGripper} (or left/right)
-                gripper = next(iter(gripper.values()))
-            g_geoms = [gripper.important_geoms["left_fingerpad"], gripper.important_geoms["right_fingerpad"]]
-            grasping = True
-            for g_group in g_geoms:
-                if not SU.check_contact(sim=self.sim, geoms_1=g_group, geoms_2=self.base.cube):
-                    grasping = False
+            gripper_qpos = obs["robot0_gripper_qpos"]  
+            grasping = (gripper_qpos[0] < 0.01) and (gripper_qpos[1] < 0.01)
 
             if in_window:
                 reward += 0.5
             if in_window and grasping:
                 reward += 0.75
-                cube_z   = float(self.sim.data.body_xpos[self.cube_bid][2])
-                height   = cube_z - self._table_top_z
-                prev_h   = prev_info.get("cube_height", 0.0) if prev_info else 0.0
-                info['cube_height'] = height
-                reward += 2 * max(0.0, height - prev_h) 
+                height = cube_z - self._table_top_z
+                LIFT_SCALE = 10.0
+                if height > 0.0:
+                    reward += height * LIFT_SCALE
             if in_window and not grasping:
                 reward -= 0.25
             # reward lifting up cube
@@ -111,16 +110,14 @@ class RewardOverrideWrapper(gym.Wrapper):
     def reset(self, **kwargs):
         obs, info = self.env.reset(**kwargs)
         # cube rests on table → capture table height
-        self._table_top_z = float(self.sim.data.body_xpos[self.cube_bid][2])
-
+        self._table_top_z = float(self.lift_env._get_observations()["cube_pos"][2])
         self.prev_info = info
         return obs, info
 
     def step(self, action):
         obs, _orig_r, terminated, truncated, info = self.env.step(action)
-
         # custom reward
-        reward = self._custom_reward(info, self.prev_info)
+        reward = self._custom_reward(self.lift_env._get_observations(), info, self.prev_info)
         
 
         # (optional) expose cube height for logging/debug

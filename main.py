@@ -42,7 +42,7 @@ def make_lift_env():
     
     return gym_env
 
-num_env = 4
+num_env = 16
 vec_env = DummyVecEnv([make_lift_env for _ in range(num_env)])
 # model = PPO("MlpPolicy", vec_env, verbose=1, learning_rate=0.1, tensorboard_log="./ppo_lift_tb/")
 
