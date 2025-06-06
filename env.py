@@ -77,11 +77,11 @@ class RewardOverrideWrapper(gym.Wrapper):
             dot = float(np.abs(np.dot(current_quat, self.desired_eef_quat)))
             ORI_THRESH = 0.95
 
-            if dot < ORI_THRESH:
-                # Gripper is too tilted—no reward this step:
-                return 0.0
-            else:
-                reward += 0.25
+            # if dot < ORI_THRESH:
+            #     # Gripper is too tilted—no reward this step:
+            #     return 0.0
+            # else:
+            #     reward += 0.25
             # 2) distance shaping
             # cube_pos = self.sim.data.body_xpos[self.cube_bid]
             # ee_pos   = self.sim.data.site_xpos[self.ee_sid]
