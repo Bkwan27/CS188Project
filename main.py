@@ -24,8 +24,7 @@ class RewardPrinter(BaseCallback):
         return True                               # keep training
 
 def make_lift_env():
-    env = suite.make(
-        env_name="Lift", 
+    env = RewardOverrideWrapper(
         robots="Panda",  
         has_renderer=True,
         has_offscreen_renderer=False,
@@ -36,14 +35,10 @@ def make_lift_env():
         horizon=500,
     )
     #env = Monitor(env)          # <- adds episode reward/length to info dict
-    gym_env = GymWrapper(env)
-    gym_env = RewardOverrideWrapper(gym_env)
-    
-    return gym_env
+    return GymWrapper(env)
 
 num_env = 1
 vec_env = DummyVecEnv([make_lift_env for _ in range(num_env)])
-# model = PPO("MlpPolicy", vec_env, verbose=1, learning_rate=0.1, tensorboard_log="./ppo_lift_tb/")
 
 model = PPO("MlpPolicy", vec_env, verbose=1, learning_rate=3e-4, tensorboard_log="./ppo_lift_tb/")
 
