@@ -2,14 +2,16 @@ import gymnasium as gym
 import numpy as np
 import robosuite as suite
 from robosuite.wrappers import GymWrapper
+from robosuite import load_composite_controller_config
 import time
-from stable_baselines3 import PPO
+from stable_baselines3 import PPO, SAC
 from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.monitor import Monitor
 from env import RewardOverrideWrapper
 
 from stable_baselines3.common.callbacks import BaseCallback
 import numpy as np
+from argparse import ArgumentParser
 
 # 4yQo6f3Z
 
@@ -24,8 +26,10 @@ class RewardPrinter(BaseCallback):
         return True                               # keep training
 
 def make_lift_env():
+    # config = load_composite_controller_config(controller="BASIC")
     env = RewardOverrideWrapper(
         robots="Panda",  
+        # controller_configs=config,
         has_renderer=False,
         has_offscreen_renderer=False,
         use_camera_obs=False,
@@ -38,22 +42,35 @@ def make_lift_env():
     env = Monitor(env)
     return env
 
+def parse_args():
+    parser = ArgumentParser()
+    parser.add_argument('--continue_train', type=bool, default=False)
+    parser.add_argument('--model', type=str, default='PPO')
+    return parser.parse_args()
+
 def main():
+    args = parse_args()
     num_env = 1
     vec_env = DummyVecEnv([make_lift_env for _ in range(num_env)])
 
-    continue_train = True
-    if continue_train:
-        print("Loading existing model...")
-        model = PPO.load("ppo_lift.zip", env=vec_env, )
-    else:
-        model = PPO("MlpPolicy", vec_env, verbose=1, learning_rate=3e-4, tensorboard_log="./ppo_lift_tb/")
+    if args.model == 'PPO':
+        if args.continue_train:
+            print("Loading existing PPO model...")
+            model = PPO.load("PPO.zip", env=vec_env, verbose=1, learning_rate=3e-4, tensorboard_log="./ppo_lift_tb/")
+        else:
+            model = PPO("MlpPolicy", env=vec_env, verbose=1, learning_rate=3e-4, tensorboard_log="./ppo_lift_tb/")
+    elif args.model == 'SAC':
+        if args.continue_train:
+            print("Loading existing SAC model...")
+            model = SAC.load("SAC.zip", env=vec_env, verbose=1, learning_rate=3e-4, tensorboard_log="./sac_lift_tb/")
+        else:
+            model = SAC("MlpPolicy", env=vec_env, verbose=1, learning_rate=3e-4, tensorboard_log="./sac_lift_tb/")
 
     callback = RewardPrinter()
     print("Training PPO on Lift environment...")
 
     model.learn(total_timesteps=500000, callback=callback)
-    model.save("ppo_lift")
+    model.save(args.model)
 
     print("Testing trained model...")
     obs = vec_env.reset()
