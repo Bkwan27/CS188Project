@@ -90,7 +90,8 @@ class RewardOverrideWrapper(gym.Wrapper):
             dist = np.linalg.norm(ee_pos - cube_pos)
             #print(dist)
             
-            reward += (1 - np.tanh(10.0 * dist))
+            # reward += (1 - np.tanh(10.0 * dist))
+            reward += np.exp(-(dist**2))
             info['ee_dist'] = float(dist)
             # 3) gripper gating
             gripper_to_cube = obs["gripper_to_cube_pos"]
