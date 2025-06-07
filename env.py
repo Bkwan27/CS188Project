@@ -46,18 +46,55 @@ class RewardOverrideWrapper(Lift):
         elif self.reward_shaping:
 
             # reaching reward
-            dist = self._gripper_to_target(
+            reach_dist = self._gripper_to_target(
                 gripper=self.robots[0].gripper, target=self.cube.root_body, target_type="body", return_distance=True
             )
-            reaching_reward = 1 - np.tanh(10.0 * dist)
-            reward += reaching_reward
+            reward += 1 - np.tanh(10.0 * reach_dist)
 
             # grasping reward
-            if self._check_grasp(gripper=self.robots[0].gripper, object_geoms=self.cube):
-                reward += 0.25
+            reward += self.add_grasp_reward()
+
+            # dense lifting reward
+            cube_height = self.sim.data.body_xpos[self.cube_body_id][2]
+            table_height = self.model.mujoco_arena.table_offset[2]
+            # 1: >= 4cm; normalized to [0, 1] w.r.t. 4cm lift height
+            lift_progress = np.clip((cube_height - table_height) / 0.04, 0.0, 1.0)
+            reward += 1.0 * lift_progress
 
         # Scale reward if requested
         if self.reward_scale is not None:
             reward *= self.reward_scale / 2.25
 
         return reward
+
+    def add_grasp_reward(self):
+        reward = 0.0
+        gripper = self.robots[0].gripper
+
+        # Sparse grasping reward
+        if self._check_grasp(gripper=self.robots[0].gripper, object_geoms=self.cube):
+            reward += 0.75
+            return reward
+
+        # If not grasping, compute dense grasping reward
+        if isinstance(gripper, dict):
+            grippers = list(gripper.values())
+        else:
+            grippers = [gripper]
+
+        for g in grippers:
+            left_geom = g.important_geoms["left_fingerpad"][0]
+            right_geom = g.important_geoms["right_fingerpad"][0]
+
+            left_pos = self.sim.data.get_geom_xpos(left_geom)
+            right_pos = self.sim.data.get_geom_xpos(right_geom)
+            cube_pos = self.sim.data.get_body_xpos(self.cube.root_body)
+
+            # Dense grasp reward: closer fingerpads = better
+            left_dist = np.linalg.norm(left_pos - cube_pos)
+            right_dist = np.linalg.norm(right_pos - cube_pos)
+            proximity = 1 - np.tanh(10.0 * (left_dist + right_dist) / 2.0)
+            reward += 0.5 * proximity
+
+        return reward
+
