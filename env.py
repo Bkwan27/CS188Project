@@ -16,8 +16,12 @@ class RewardOverrideWrapper(gym.Wrapper):
     # --------------------------------------------------------------
     def __init__(self, env, reward_scale=10, reward_shaping=True):
         super().__init__(env)
-        self.base = self.env.unwrapped                      # raw Lift env
-
+        raw = env
+        while hasattr(raw, "env"):       # e.g. GymWrapper, some VecWrapper, etc.
+            raw = raw.env
+        # At this point, `raw` should be something like a robosuite.environments.lift.Lift instance
+        self.lift_env = raw
+        self.base = self.env.unwrapped
         # ----- cached MuJoCo handles -----
         self.sim   = self.base.sim
         self.cube_bid = self.base.cube_body_id              # cube body id
@@ -36,11 +40,12 @@ class RewardOverrideWrapper(gym.Wrapper):
         self.reward_shaping = reward_shaping
         self.prev_info      = None           # will store previous step's info
         self._table_top_z   = None           # filled in at reset()
+        self.desired_eef_quat = None
 
     # --------------------------------------------------------------
     # helper: EE is above cube and aligned
     def in_grasp_window(
-        self, xy_thresh=0.02, z_low=0.01, z_high=0.05, ori_thresh=0.8
+        self, xy_thresh=0.005, z_low=0.01, z_high=0.05, ori_thresh=0.9
     ) -> bool:
         cube_pos = self.sim.data.body_xpos[self.cube_bid]
         ee_pos   = self.sim.data.site_xpos[self.ee_sid]
@@ -58,56 +63,68 @@ class RewardOverrideWrapper(gym.Wrapper):
         return cube_height > self._table_top_z + 0.04     # 4 cm above table
 
     # --------------------------------------------------------------
-    def _custom_reward(self, info, prev_info) -> float:
+    def _custom_reward(self, obs, info, prev_info) -> float:
         self.base = self.env.unwrapped 
         reward = 0.0
 
         # 1) sparse success
-        if self._check_success():
-            reward += 1.0
+        cube_z = obs["cube_pos"][2]
+        if cube_z > self._table_top_z + 0.04:
+            reward += 10.0
 
         if self.reward_shaping:
+            current_quat = obs["robot0_eef_quat"]
+            dot = float(np.abs(np.dot(current_quat, self.desired_eef_quat)))
+            ORI_THRESH = 0.95
+
+            # if dot < ORI_THRESH:
+            #     # Gripper is too tilted—no reward this step:
+            #     return 0.0
+            # else:
+            #     reward += 0.25
             # 2) distance shaping
-            cube_pos = self.sim.data.body_xpos[self.cube_bid]
-            ee_pos   = self.sim.data.site_xpos[self.ee_sid]
-            dist     = np.linalg.norm(ee_pos - cube_pos)
-            reward  += 1.0 - np.tanh(10.0 * dist)
-
+            # cube_pos = self.sim.data.body_xpos[self.cube_bid]
+            # ee_pos   = self.sim.data.site_xpos[self.ee_sid]
+            ee_pos = obs['robot0_eef_pos']
+            cube_pos = obs['cube_pos']
+            dist = np.linalg.norm(ee_pos - cube_pos)
+            #print(dist)
+            
+            reward += (1 - np.tanh(10.0 * dist))
+            info['ee_dist'] = float(dist)
             # 3) gripper gating
-            in_window   = self.in_grasp_window()
-            # grip_ctrl   = self.sim.data.ctrl[self.gripper_act_ids]
-            # closing_cmd = np.mean(grip_ctrl) < -0.01
+            gripper_to_cube = obs["gripper_to_cube_pos"]
+            in_window = np.linalg.norm(gripper_to_cube) < 0.01
 
-            # if closing_cmd and not in_window:
-            #     reward -= 0.10            # closing too early
-            # if (not closing_cmd) and in_window:
-            #     reward -= 0.05            # failing to close on target
+            gripper_qpos = obs["robot0_gripper_qpos"]  
+            grasp_lift_threshold = 0.005
+            close_gripper = (gripper_qpos[0] < 0.01) and (gripper_qpos[1] < 0.01)
+           
 
-            # 4) contact bonus
-            robot = self.env.unwrapped.robots[0]
-            gripper = robot.gripper
-            if isinstance(gripper, dict):          # {'right': PandaGripper} (or left/right)
-                gripper = next(iter(gripper.values()))
-            g_geoms = [gripper.important_geoms["left_fingerpad"], gripper.important_geoms["right_fingerpad"]]
-            grasping = True
-            for g_group in g_geoms:
-                if not SU.check_contact(sim=self.sim, geoms_1=g_group, geoms_2=None):
-                    grasping = False
-            # left, right = False, False
-            # for i in range(self.sim.data.ncon):
-            #     c = self.sim.data.contact[i]
-            #     g1, g2 = c.geom1, c.geom2
-            #     if (g1 in self.l_finger_geom_ids and g2 == self.cube_gid) or \
-            #        (g2 in self.l_finger_geom_ids and g1 == self.cube_gid):
-            #         left = True
-            #     if (g1 in self.r_finger_geom_ids and g2 == self.cube_gid) or \
-            #        (g2 in self.r_finger_geom_ids and g1 == self.cube_gid):
-            #         right = True
+            if in_window and close_gripper:
+                reward += 0.5
+                height = cube_z - self._table_top_z
+                LIFT_SCALE = 10.0
+                if height > 0.0:
+                    reward += height * LIFT_SCALE
+            grasping = close_gripper and (cube_z > self._table_top_z + grasp_lift_threshold)
             if in_window and grasping:
-                reward += 0.25
+                reward += 1
+                height = cube_z - self._table_top_z
+                LIFT_SCALE = 10.0
+                if height > 0.0:
+                    reward += height * LIFT_SCALE
             if in_window and not grasping:
-                reward -= 0.05
-
+                reward -= 0.25
+            # if in_window and not close_gripper:
+            #     reward -= 0.05
+            # ORI_WEIGHT = 0.1
+            # current_quat = obs["robot0_eef_quat"]
+            # dot = np.abs(np.dot(current_quat, self.desired_eef_quat))
+            # ori_penalty = max(0.0, 1.0 - dot)
+            # reward -= ori_penalty * ORI_WEIGHT
+            # reward lifting up cube
+        # reward -= 0.01
         return reward * self.reward_scale / 2.25
 
     # --------------------------------------------------------------
@@ -115,18 +132,22 @@ class RewardOverrideWrapper(gym.Wrapper):
     def reset(self, **kwargs):
         obs, info = self.env.reset(**kwargs)
         # cube rests on table → capture table height
-        self._table_top_z = float(self.sim.data.body_xpos[self.cube_bid][2])
+        self._table_top_z = float(self.lift_env._get_observations()["cube_pos"][2])
 
+        if self.desired_eef_quat is None:
+            # obs["robot0_eef_quat"] is a length-4 np.array [w, x, y, z]
+            self.desired_eef_quat = self.lift_env._get_observations()["robot0_eef_quat"].copy()
+        
         self.prev_info = info
         return obs, info
 
     def step(self, action):
         obs, _orig_r, terminated, truncated, info = self.env.step(action)
-
         # custom reward
-        reward = self._custom_reward(info, self.prev_info)
-        self.prev_info = info
+        reward = self._custom_reward(self.lift_env._get_observations(), info, self.prev_info)
+        
 
         # (optional) expose cube height for logging/debug
         info["cube_height"] = float(self.sim.data.body_xpos[self.cube_bid][2]) - self._table_top_z
+        self.prev_info = info
         return obs, reward, terminated, truncated, info

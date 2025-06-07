@@ -12,6 +12,7 @@ from stable_baselines3.common.callbacks import BaseCallback
 import numpy as np
 
 # 4yQo6f3Z
+# .\venv\Scripts\Activate.ps1
 
 class RewardPrinter(BaseCallback):
     def _on_step(self) -> bool:
@@ -27,7 +28,7 @@ def make_lift_env():
     env = suite.make(
         env_name="Lift", 
         robots="Panda",  
-        has_renderer=True,
+        has_renderer=False,
         has_offscreen_renderer=False,
         use_camera_obs=False,
         use_object_obs=True,
@@ -41,11 +42,11 @@ def make_lift_env():
     
     return gym_env
 
-num_env = 1
+num_env = 16
 vec_env = DummyVecEnv([make_lift_env for _ in range(num_env)])
 # model = PPO("MlpPolicy", vec_env, verbose=1, learning_rate=0.1, tensorboard_log="./ppo_lift_tb/")
 
-model = PPO("MlpPolicy", vec_env, verbose=1, learning_rate=3e-4, tensorboard_log="./ppo_lift_tb/")
+model = PPO("MlpPolicy", vec_env, verbose=1, learning_rate=1e-2, tensorboard_log="./ppo_lift_tb/")
 
 callback = RewardPrinter()
 print("Training PPO on Lift environment...")
@@ -66,7 +67,7 @@ for i in range(101):
     for env_idx in range(num_env):
         episode_rewards[env_idx] += rewards[env_idx]
         episode_lengths[env_idx] += 1
-        
+    
         if dones[env_idx]:
             episode_counts[env_idx] += 1
             print(f"Env {env_idx}: Episode {episode_counts[env_idx]} finished at step {i}")
