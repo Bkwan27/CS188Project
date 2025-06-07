@@ -1,18 +1,20 @@
-import os
-os.environ["MUJOCO_GL"] = "egl"  # must be before importing mujoco/robosuite
-
-import time
-import numpy as np
+import os, time, numpy as np
 from stable_baselines3 import PPO
-from stable_baselines3.common.vec_env import DummyVecEnv
+import robosuite as suite
+from env import RewardOverrideWrapper
 from robosuite.wrappers import GymWrapper
-from env import RewardOverrideWrapper  # Your custom reward Lift class
+from stable_baselines3.common.vec_env import DummyVecEnv
+
+import numpy as np, sys
+sys.modules['numpy._core'] = np.core
+sys.modules['numpy._core.numeric'] = np.core.numeric
+os.environ.setdefault("MUJOCO_GL", "egl")
 
 def make_lift_env():
     env = RewardOverrideWrapper(
         robots="Panda",  
-        has_renderer=False,                # disable GUI viewer (GLFW)
-        has_offscreen_renderer=False,       # enable EGL offscreen rendering
+        has_renderer=True,
+        has_offscreen_renderer=False,
         use_camera_obs=False,
         use_object_obs=True,
         reward_shaping=True,
@@ -22,39 +24,39 @@ def make_lift_env():
     env = GymWrapper(env)
     return env
 
-# Instantiate environment and model
-num_env = 1
+num_env=1
 vec_env = DummyVecEnv([make_lift_env for _ in range(num_env)])
+
 model = PPO.load("ppo_lift.zip", env=vec_env)
 
 obs = vec_env.reset()
 episode, ep_return, ep_len = 1, 0.0, 0
 
-print("Running saved policy in headless mode (EGL, no viewer)...")
-
+print("Running saved policy — close the viewer window to stop.")
 try:
     while True:
-        # Predict and step
+        # 3) Policy → action
         action, _ = model.predict(obs, deterministic=True)
-        obs, rewards, dones, infos = vec_env.step(action)
 
+        # 4) Step the simulator
+        obs, rewards, dones, infos = vec_env.step(action)
         ep_return += rewards[0]
         ep_len += 1
 
-        # Optional: render RGB frame for debug (can record/save here)
-        # frame = vec_env.envs[0].render(mode='rgb_array')
+        # 5) Render one frame (robosuite auto-renders when has_renderer==True,
+        #    but calling explicitly lets you slow the loop if you like)
+        vec_env.envs[0].render()
 
         if dones[0]:
-            print(f"Episode {episode} | Return: {ep_return:.3f} | Length: {ep_len} steps")
+            print(f"Episode {episode} | return = {ep_return:.3f} | length = {ep_len} steps")
             obs = vec_env.reset()
-            episode += 1
+            episode  += 1
             ep_return = 0.0
-            ep_len = 0
+            ep_len    = 0
 
-        time.sleep(1 / 60)  # Simulate real-time speed (60 FPS)
-
+        # Optional: cap FPS so it doesn’t run too fast
+        time.sleep(1 / 60)          # 60 Hz viewer
 except KeyboardInterrupt:
     print("Interrupted by user.")
-
 finally:
     vec_env.close()
