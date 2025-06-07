@@ -40,7 +40,7 @@ class RewardOverrideWrapper(Lift):
 
         # sparse completion reward
         if self._check_success():
-            reward = 2.25
+            reward += 2.25
 
         # use a shaping reward
         elif self.reward_shaping:
@@ -49,7 +49,7 @@ class RewardOverrideWrapper(Lift):
             reach_dist = self._gripper_to_target(
                 gripper=self.robots[0].gripper, target=self.cube.root_body, target_type="body", return_distance=True
             )
-            reward += 1 - np.tanh(10.0 * reach_dist)
+            reward += 1 - np.tanh(5.0 * reach_dist)
 
             # grasping reward
             reward += self.add_grasp_reward()
@@ -59,7 +59,11 @@ class RewardOverrideWrapper(Lift):
             table_height = self.model.mujoco_arena.table_offset[2]
             # 1: >= 4cm; normalized to [0, 1] w.r.t. 4cm lift height
             lift_progress = np.clip((cube_height - table_height) / 0.04, 0.0, 1.0)
-            reward += 1.0 * lift_progress
+            reward += 1.5 * lift_progress
+
+            # Penalize if cube pushed into the table
+            if cube_height < table_height + 0.005:
+                reward -= 0.5
 
         # Scale reward if requested
         if self.reward_scale is not None:
@@ -70,11 +74,6 @@ class RewardOverrideWrapper(Lift):
     def add_grasp_reward(self):
         reward = 0.0
         gripper = self.robots[0].gripper
-
-        # Sparse grasping reward
-        if self._check_grasp(gripper=self.robots[0].gripper, object_geoms=self.cube):
-            reward += 0.75
-            return reward
 
         # If not grasping, compute dense grasping reward
         if isinstance(gripper, dict):
@@ -95,6 +94,10 @@ class RewardOverrideWrapper(Lift):
             right_dist = np.linalg.norm(right_pos - cube_pos)
             proximity = 1 - np.tanh(10.0 * (left_dist + right_dist) / 2.0)
             reward += 0.5 * proximity
+
+        # Sparse grasping reward
+        if self._check_grasp(gripper=gripper, object_geoms=self.cube):
+            reward += 0.5
 
         return reward
 
