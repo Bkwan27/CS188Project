@@ -60,6 +60,9 @@ class RewardOverrideWrapper(Lift):
             # 1: >= 4cm; normalized to [0, 1] w.r.t. 4cm lift height
             lift_progress = np.clip((cube_height - table_height) / 0.04, 0.0, 1.0)
             reward += 1.0 * lift_progress
+            # time punishment for not lifting cube
+            if reach_dist < 0.05 and lift_progress < 0.05:
+                reward -= 0.01
 
         # Scale reward if requested
         if self.reward_scale is not None:
