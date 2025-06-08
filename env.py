@@ -59,7 +59,7 @@ class RewardOverrideWrapper(Lift):
             dist = np.linalg.norm(eef_pos - cube_pos)
 
             # Add reward if gripper is well-aligned in XY and slightly above cube in Z
-            if xy_dist < 0.03 and 0.03 < z_above < 0.1:
+            if xy_dist < 0.01 and 0.03 < z_above < 0.1:
                 reward += 0.3
                 reward += self.add_grasp_reward()
             reward += 1 - np.tanh(10.0 * dist)

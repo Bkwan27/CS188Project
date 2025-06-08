@@ -8,7 +8,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 import numpy as np, sys
 sys.modules['numpy._core'] = np.core
 sys.modules['numpy._core.numeric'] = np.core.numeric
-os.environ.setdefault("MUJOCO_GL", "egl")
+os.environ.setdefault("MUJOCO_GL", "glfw")
 
 def make_lift_env():
     env = RewardOverrideWrapper(

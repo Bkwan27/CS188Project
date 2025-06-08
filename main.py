@@ -46,6 +46,7 @@ def parse_args():
     parser = ArgumentParser()
     parser.add_argument('--continue_train', type=bool, default=False)
     parser.add_argument('--model', type=str, default='PPO')
+    parser.add_argument('--lr', type=float, default=3e-4, help="Learning rate for the model")
     return parser.parse_args()
 
 def main():
@@ -58,19 +59,19 @@ def main():
             print("Loading existing PPO model...")
             model = PPO.load("PPO.zip", env=vec_env, verbose=1, learning_rate=3e-4, tensorboard_log="./ppo_lift_tb/")
         else:
-            model = PPO("MlpPolicy", env=vec_env, verbose=1, learning_rate=3e-4, tensorboard_log="./ppo_lift_tb/")
+            model = PPO("MlpPolicy", env=vec_env, verbose=1, learning_rate=args.lr, tensorboard_log="./ppo_lift_tb/")
     elif args.model == 'SAC':
         if args.continue_train:
             print("Loading existing SAC model...")
             model = SAC.load("SAC.zip", env=vec_env, verbose=1, learning_rate=3e-4, tensorboard_log="./sac_lift_tb/")
         else:
-            model = SAC("MlpPolicy", env=vec_env, verbose=1, learning_rate=3e-4, tensorboard_log="./sac_lift_tb/")
+            model = SAC("MlpPolicy", env=vec_env, verbose=1, learning_rate=args.lr, tensorboard_log="./sac_lift_tb/")
 
     callback = RewardPrinter()
     print("Training PPO on Lift environment...")
 
     model.learn(total_timesteps=1000000, callback=callback)
-    model_filename = f"{args.model}4_lift_{500000}_steps.zip"
+    model_filename = f"{args.model}4_lift_{500000}_steps_1e-1.zip"
     model.save(model_filename)
 
     print("Testing trained model...")
