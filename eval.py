@@ -27,7 +27,7 @@ def make_lift_env():
 num_env=1
 vec_env = DummyVecEnv([make_lift_env for _ in range(num_env)])
 
-model = PPO.load("ppo_lift.zip", env=vec_env)
+model = PPO.load("PPO3_lift_500000_steps.zip", env=vec_env)
 
 obs = vec_env.reset()
 episode, ep_return, ep_len = 1, 0.0, 0
