@@ -80,11 +80,11 @@ class RewardOverrideWrapper(Lift):
 
             # discourage closing grip far from cube
             # print(self.robots[0].gripper)
-            site_id = self.robots[0].eef_site_id['right']
-            site_name = self.sim.model.site_id2name(site_id)
-            grip_ctrl = self.sim.data.ctrl[self.robots[0].gripper_dof_idx]
-            if np.mean(grip_ctrl) < -0.01 and reach_dist > 0.1:
-                reward -= 0.1  # closing grip far from cube
+            # site_id = self.robots[0].eef_site_id['right']
+            # site_name = self.sim.model.site_id2name(site_id)
+            # grip_ctrl = self.sim.data.ctrl[self.robots[0].gripper_dof_idx]
+            # if np.mean(grip_ctrl) < -0.01 and reach_dist > 0.1:
+            #     reward -= 0.1  # closing grip far from cube
 
             # achieve desired orientation
             # desired_downward_quat = np.array([0, 1, 0, 0])  # or tune for your environment
