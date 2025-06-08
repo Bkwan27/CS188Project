@@ -8,6 +8,7 @@ from stable_baselines3 import PPO, SAC
 from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.monitor import Monitor
 from env import RewardOverrideWrapper
+#from default_env import RewardOverrideWrapper
 
 from stable_baselines3.common.callbacks import BaseCallback
 import numpy as np
@@ -71,7 +72,7 @@ def main():
     print("Training PPO on Lift environment...")
 
     model.learn(total_timesteps=1000000, callback=callback)
-    model_filename = f"{args.model}4_lift_{500000}_steps_1e-1.zip"
+    model_filename = f"{args.model}5_lift_{500000}_steps_no_neg.zip"
     model.save(model_filename)
 
     print("Testing trained model...")

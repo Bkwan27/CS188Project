@@ -76,8 +76,8 @@ class RewardOverrideWrapper(Lift):
             lift_progress = np.clip((cube_height - table_height) / 0.04, 0.0, 1.0)
             reward += 1.0 * lift_progress
             # time punishment for not lifting cube
-            if reach_dist < 0.05 and lift_progress < 0.05:
-                reward -= 0.01
+            # if dist < 0.05 and lift_progress < 0.05:
+            #     reward -= 0.01
 
             # discourage closing grip far from cube
             # print(self.robots[0].gripper)
