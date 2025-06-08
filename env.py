@@ -61,12 +61,13 @@ class RewardOverrideWrapper(Lift):
             # Add reward if gripper is well-aligned in XY and slightly above cube in Z
             if xy_dist < 0.03 and 0.03 < z_above < 0.1:
                 reward += 0.3
+                reward += self.add_grasp_reward()
             reward += 1 - np.tanh(10.0 * dist)
 
             # grasping reward
             if self._check_grasp(gripper=self.robots[0].gripper, object_geoms=self.cube):
                 reward += 0.75
-            reward += self.add_grasp_reward()
+            
 
             # dense lifting reward
             cube_height = self.sim.data.body_xpos[self.cube_body_id][2]

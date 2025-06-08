@@ -69,7 +69,7 @@ def main():
     callback = RewardPrinter()
     print("Training PPO on Lift environment...")
 
-    model.learn(total_timesteps=500000, callback=callback)
+    model.learn(total_timesteps=1000000, callback=callback)
     model_filename = f"{args.model}4_lift_{500000}_steps.zip"
     model.save(model_filename)
 
