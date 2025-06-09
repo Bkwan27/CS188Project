@@ -2,7 +2,6 @@ import gymnasium as gym
 import numpy as np
 import robosuite as suite
 from robosuite.wrappers import GymWrapper
-from robosuite import load_composite_controller_config
 import time
 from stable_baselines3 import PPO, SAC
 from stable_baselines3.common.vec_env import DummyVecEnv
@@ -10,6 +9,7 @@ from stable_baselines3.common.monitor import Monitor
 from env import RewardOverrideWrapper
 
 from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.logger import Logger
 import numpy as np
 from argparse import ArgumentParser
 
@@ -18,18 +18,29 @@ from argparse import ArgumentParser
 class RewardPrinter(BaseCallback):
     def _on_step(self) -> bool:
         # `infos` is a list (one per env in the VecEnv)
-        for info in self.locals["infos"]:
-            if "episode" in info:                 # episode just finished
+        for i, info in enumerate(self.locals["infos"]):
+            if "episode" in info:
                 r = info["episode"]["r"]
                 l = info["episode"]["l"]
                 print(f"Episode done: return={r:.2f}, length={l} steps")
-        return True                               # keep training
+            
+                env = self.training_env.envs[i].unwrapped
+                if hasattr(env, "debug_info"):
+                    debug_info = env.debug_info
+                    for key, value in debug_info.items():
+                        if value is not None:
+                            self.logger.record(f"debug/{key}", value)
 
-def make_lift_env():
-    # config = load_composite_controller_config(controller="BASIC")
+                if hasattr(env, "reward_components"):
+                    reward_info = env.reward_components
+                    for key, value in reward_info.items():
+                        if value is not None:
+                            self.logger.record(f"reward_components/{key}", value)
+        return True
+
+def make_lift_env(dense=False):
     env = RewardOverrideWrapper(
         robots="Panda",  
-        # controller_configs=config,
         has_renderer=False,
         has_offscreen_renderer=False,
         use_camera_obs=False,
@@ -37,6 +48,7 @@ def make_lift_env():
         reward_shaping=True,
         control_freq=20,
         horizon=500,
+        dense=dense,
     )
     env = GymWrapper(env)
     env = Monitor(env)
@@ -46,31 +58,72 @@ def parse_args():
     parser = ArgumentParser()
     parser.add_argument('--continue_train', type=bool, default=False)
     parser.add_argument('--model', type=str, default='PPO')
+    parser.add_argument('--dense', type=bool, default=False)
+    parser.add_argument('--timesteps', type=int, default=500000)
     return parser.parse_args()
 
 def main():
     args = parse_args()
     num_env = 1
-    vec_env = DummyVecEnv([make_lift_env for _ in range(num_env)])
+    vec_env = DummyVecEnv([lambda: make_lift_env(args.dense) for _ in range(num_env)])
 
     if args.model == 'PPO':
         if args.continue_train:
             print("Loading existing PPO model...")
-            model = PPO.load("PPO.zip", env=vec_env, verbose=1, learning_rate=3e-4, tensorboard_log="./ppo_lift_tb/")
+            model = PPO.load(
+                "PPO.zip", 
+                env=vec_env,
+                verbose=1, 
+                tensorboard_log="./ppo_lift_tb/", 
+                seed=1,
+            )
         else:
-            model = PPO("MlpPolicy", env=vec_env, verbose=1, learning_rate=3e-4, tensorboard_log="./ppo_lift_tb/")
+            model = PPO(
+                "MlpPolicy", 
+                env=vec_env,
+                learning_rate=1e-4,
+                n_steps=1024,
+                batch_size=64,
+                ent_coef=0.01,
+                policy_kwargs={"net_arch": [256, 256]},
+                verbose=1, 
+                tensorboard_log="./ppo_lift_tb/", 
+                seed=1,
+            )
     elif args.model == 'SAC':
         if args.continue_train:
             print("Loading existing SAC model...")
-            model = SAC.load("SAC.zip", env=vec_env, verbose=1, learning_rate=3e-4, tensorboard_log="./sac_lift_tb/")
+            model = SAC.load(
+                "SAC.zip", 
+                env=vec_env,
+                verbose=1,
+                tensorboard_log="./sac_lift_tb/",
+                seed=1,
+            )
         else:
-            model = SAC("MlpPolicy", env=vec_env, verbose=1, learning_rate=3e-4, tensorboard_log="./sac_lift_tb/")
+            model = SAC(
+                "MlpPolicy",
+                env=vec_env,
+                learning_rate=5e-4,
+                learning_starts=3300,
+                batch_size=128,
+                train_freq=2500,
+                gradient_steps=1000,
+                target_update_interval=5,
+                policy_kwargs={"net_arch": [256, 256]},
+                verbose=1,
+                tensorboard_log="./sac_lift_tb/",
+                seed=1,
+            )
 
     callback = RewardPrinter()
     print("Training PPO on Lift environment...")
 
-    model.learn(total_timesteps=500000, callback=callback)
-    model.save(args.model)
+    model.learn(total_timesteps=args.timesteps, callback=callback)
+    if args.dense:
+        model.save(f'{args.model}_dense')
+    else:
+        model.save(f'{args.model}_sparse')
 
     print("Testing trained model...")
     obs = vec_env.reset()
