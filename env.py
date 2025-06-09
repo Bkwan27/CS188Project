@@ -59,7 +59,7 @@ class RewardOverrideWrapper(Lift):
             dist = np.linalg.norm(eef_pos - cube_pos)
 
             # Add reward if gripper is well-aligned in XY and slightly above cube in Z
-            if xy_dist < 0.01 and z_above < 0.011:
+            if xy_dist < 0.01 and 0.01 < z_above < 0.02:
                 reward += 0.3
                 reward += self.add_grasp_reward()
             reward += 1 - np.tanh(10.0 * dist)
@@ -75,9 +75,12 @@ class RewardOverrideWrapper(Lift):
             # 1: >= 4cm; normalized to [0, 1] w.r.t. 4cm lift height
             lift_progress = np.clip((cube_height - table_height) / 0.04, 0.0, 1.0)
             reward += 1.0 * lift_progress
+            # stable lift
+            cube_vel = np.linalg.norm(self.sim.data.body_xvelp[self.cube_body_id])
+            reward += 0.5 * (1.0 - np.tanh(5 * cube_vel))  # smaller when moving too much
             # time punishment for not lifting cube
-            # if dist < 0.05 and lift_progress < 0.05:
-            #     reward -= 0.01
+            if dist < 0.05 and lift_progress < 0.05:
+                reward -= 0.01
 
             # discourage closing grip far from cube
             # print(self.robots[0].gripper)

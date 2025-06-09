@@ -7,8 +7,8 @@ import time
 from stable_baselines3 import PPO, SAC
 from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.monitor import Monitor
-#from env import RewardOverrideWrapper
-from default_env import RewardOverrideWrapper
+from env import RewardOverrideWrapper
+#from default_env import RewardOverrideWrapper
 
 from stable_baselines3.common.callbacks import BaseCallback
 import numpy as np
@@ -58,7 +58,7 @@ def main():
     if args.model == 'PPO':
         if args.continue_train:
             print("Loading existing PPO model...")
-            model = PPO.load("PPO4_lift_500000_steps_1e-4.zip", env=vec_env, verbose=1, learning_rate=args.lr, tensorboard_log="./ppo_lift_tb/")
+            model = PPO.load("PPO6_lift_500000_steps_0.01to0.02.zip", env=vec_env, verbose=1, learning_rate=args.lr, tensorboard_log="./ppo_lift_tb/")
         else:
             model = PPO("MlpPolicy", env=vec_env, verbose=1, learning_rate=args.lr, tensorboard_log="./ppo_lift_tb/")
     elif args.model == 'SAC':
@@ -72,7 +72,7 @@ def main():
     print("Training PPO on Lift environment...")
 
     model.learn(total_timesteps=1000000, callback=callback)
-    model_filename = f"{args.model}6_lift_{2000000}_steps_1e-4.zip"
+    model_filename = f"{args.model}6_lift_{2000000}_steps_0.01to0.02.zip"
     model.save(model_filename)
 
     print("Testing trained model...")
