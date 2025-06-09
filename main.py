@@ -79,7 +79,7 @@ def main():
         if args.continue_train:
             print("Loading existing PPO model...")
             model = PPO.load(
-                "PPO.zip", 
+                "PPO_dense.zip", 
                 env=vec_env,
                 verbose=1, 
                 tensorboard_log="./ppo_lift_tb/", 
@@ -129,10 +129,14 @@ def main():
     print(f"Dense reward: {args.dense}, Reward shaping: {args.reward_shaping}")
 
     model.learn(total_timesteps=args.timesteps, callback=callback)
-    if args.dense:
-        model.save(f'{args.model}_dense_{args.timesteps}')
+    if args.reward_shaping:
+        shaping = "shaping"
     else:
-        model.save(f'{args.model}_sparse_{args.timesteps}')
+        shaping = "no_shaping"
+    if args.dense:
+        model.save(f'{args.model}_dense_{shaping}_{args.timesteps}')
+    else:
+        model.save(f'{args.model}_sparse_{shaping}_{args.timesteps}')
 
     print("Testing trained model...")
     obs = vec_env.reset()
