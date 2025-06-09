@@ -39,13 +39,14 @@ class RewardPrinter(BaseCallback):
         return True
 
 def make_lift_env(dense=False):
+    args = parse_args()
     env = RewardOverrideWrapper(
         robots="Panda",  
         has_renderer=False,
         has_offscreen_renderer=False,
         use_camera_obs=False,
         use_object_obs=True,
-        reward_shaping=True,
+        reward_shaping=args.reward_shaping,
         control_freq=20,
         horizon=500,
         dense=dense,
@@ -56,10 +57,17 @@ def make_lift_env(dense=False):
 
 def parse_args():
     parser = ArgumentParser()
-    parser.add_argument('--continue_train', type=bool, default=False)
-    parser.add_argument('--model', type=str, default='PPO')
-    parser.add_argument('--dense', type=bool, default=False)
-    parser.add_argument('--timesteps', type=int, default=500000)
+
+    parser.add_argument('--continue_train', action='store_true', help="Continue training from saved model")
+    parser.add_argument('--model', type=str, choices=['PPO', 'SAC'], default='PPO', help="RL algorithm to use")
+    parser.add_argument('--dense', action='store_true', help='Use dense reward')
+
+    parser.add_argument('--reward_shaping', action='store_true', help="Enable reward shaping")
+    parser.add_argument('--no_reward_shaping', dest='reward_shaping', action='store_false', help="Disable reward shaping")
+    parser.set_defaults(reward_shaping=True)
+
+    parser.add_argument('--timesteps', type=int, default=500_000, help="Number of training timesteps")
+
     return parser.parse_args()
 
 def main():
@@ -94,7 +102,7 @@ def main():
         if args.continue_train:
             print("Loading existing SAC model...")
             model = SAC.load(
-                "SAC.zip", 
+                "SAC_sparse.zip", 
                 env=vec_env,
                 verbose=1,
                 tensorboard_log="./sac_lift_tb/",
@@ -117,13 +125,14 @@ def main():
             )
 
     callback = RewardPrinter()
-    print("Training PPO on Lift environment...")
+    print(f"Training {args.model} on Lift environment for {args.timesteps} timesteps...")
+    print(f"Dense reward: {args.dense}, Reward shaping: {args.reward_shaping}")
 
     model.learn(total_timesteps=args.timesteps, callback=callback)
     if args.dense:
-        model.save(f'{args.model}_dense')
+        model.save(f'{args.model}_dense_{args.timesteps}')
     else:
-        model.save(f'{args.model}_sparse')
+        model.save(f'{args.model}_sparse_{args.timesteps}')
 
     print("Testing trained model...")
     obs = vec_env.reset()
