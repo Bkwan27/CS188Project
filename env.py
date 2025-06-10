@@ -70,17 +70,22 @@ class RewardOverrideWrapper(Lift):
             
 
             # dense lifting reward
+            # stable lift
+            # cube_vel = np.linalg.norm(self.sim.data.body_xvelp[self.cube_body_id])
+            # reward += 0.5 * (1.0 - np.tanh(5 * cube_vel))  # smaller when moving too much
+            margin = 0.01  # 1 cm clearance from table
             cube_height = self.sim.data.body_xpos[self.cube_body_id][2]
             table_height = self.model.mujoco_arena.table_offset[2]
+            cube_base_height = cube_height - 0.02
+            effective_lift = cube_base_height - (table_height + margin)
+            lift_progress = np.clip(effective_lift / 0.04, 0.0, 1.0)
             # 1: >= 4cm; normalized to [0, 1] w.r.t. 4cm lift height
-            lift_progress = np.clip((cube_height - table_height) / 0.04, 0.0, 1.0)
-            reward += 1.0 * lift_progress
-            # stable lift
-            cube_vel = np.linalg.norm(self.sim.data.body_xvelp[self.cube_body_id])
-            reward += 0.5 * (1.0 - np.tanh(5 * cube_vel))  # smaller when moving too much
-            # time punishment for not lifting cube
-            if dist < 0.05 and lift_progress < 0.05:
+            # lift_progress = np.clip((cube_height - table_height) / 0.04, 0.0, 1.0)
+            # # time punishment for not lifting cube
+            if dist < 0.03 and lift_progress < 0.05:
                 reward -= 0.01
+            elif lift_progress > 0.2:
+                reward += 10 * lift_progress
 
             # discourage closing grip far from cube
             # print(self.robots[0].gripper)

@@ -72,7 +72,7 @@ def main():
     print("Training PPO on Lift environment...")
 
     model.learn(total_timesteps=1000000, callback=callback)
-    model_filename = f"{args.model}6_lift_{2000000}_steps_0.01to0.02.zip"
+    model_filename = f"{args.model}6_lift_{1000000}_steps_10highrew_lift_0.2.zip"
     model.save(model_filename)
 
     print("Testing trained model...")
