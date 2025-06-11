@@ -39,7 +39,7 @@ class RewardOverrideWrapper(Lift):
             float: reward value
         """
         reward = 0.0
-
+        self.reward_shaping = False
         # sparse completion reward
         if self._check_success():
             reward += 2.25
@@ -61,7 +61,10 @@ class RewardOverrideWrapper(Lift):
             # Add reward if gripper is well-aligned in XY and slightly above cube in Z
             if xy_dist < 0.01 and 0.01 < z_above < 0.02:
                 reward += 0.3
+                # once gripper is near cube award closing gripper to grasp cube
                 reward += self.add_grasp_reward()
+
+            # reward getting closer and closer to cube (scales as you get closer)
             reward += 1 - np.tanh(10.0 * dist)
 
             # grasping reward
@@ -70,42 +73,22 @@ class RewardOverrideWrapper(Lift):
             
 
             # dense lifting reward
-            # stable lift
-            # cube_vel = np.linalg.norm(self.sim.data.body_xvelp[self.cube_body_id])
-            # reward += 0.5 * (1.0 - np.tanh(5 * cube_vel))  # smaller when moving too much
             margin = 0.01  # 1 cm clearance from table
             cube_height = self.sim.data.body_xpos[self.cube_body_id][2]
             table_height = self.model.mujoco_arena.table_offset[2]
+            # subtract 2cm to get base of cube
             cube_base_height = cube_height - 0.02
+            # make sure the base of the cube is clearly lifted above table
             effective_lift = cube_base_height - (table_height + margin)
+            # scale it to 4cm because 4cm is the amount we need to lift the cube by
             lift_progress = np.clip(effective_lift / 0.04, 0.0, 1.0)
-            # 1: >= 4cm; normalized to [0, 1] w.r.t. 4cm lift height
-            # lift_progress = np.clip((cube_height - table_height) / 0.04, 0.0, 1.0)
+
             # # time punishment for not lifting cube
             if dist < 0.03 and lift_progress < 0.05:
                 reward -= 0.01
             elif lift_progress > 0.2:
+                # scale lift progress by 10
                 reward += 10 * lift_progress
-
-            # discourage closing grip far from cube
-            # print(self.robots[0].gripper)
-            # site_id = self.robots[0].eef_site_id['right']
-            # site_name = self.sim.model.site_id2name(site_id)
-            # grip_ctrl = self.sim.data.ctrl[self.robots[0].gripper_dof_idx]
-            # if np.mean(grip_ctrl) < -0.01 and reach_dist > 0.1:
-            #     reward -= 0.1  # closing grip far from cube
-
-            # achieve desired orientation
-            # desired_downward_quat = np.array([0, 1, 0, 0])  # or tune for your environment
-            # site_id = self.robots[0].eef_site_id['right']
-            # site_name = self.sim.model.site_id2name(site_id)
-            # current_mat = self.sim.data.get_site_xmat(site_name).flatten()
-            # current_quat = mat2quat(current_mat)
-            # dot = np.abs(np.dot(current_quat, desired_downward_quat))
-            # alignment_reward = 1 - np.clip(1 - dot, 0.0, 1.0)
-            # reward += 0.2 * alignment_reward
-
-
 
         # Scale reward if requested
         if self.reward_scale is not None:
