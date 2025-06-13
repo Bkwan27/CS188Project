@@ -14,7 +14,7 @@ from stable_baselines3.common.logger import Logger
 import numpy as np
 from argparse import ArgumentParser
 
-config = load_composite_controller_config(controller="BASIC")
+# config = load_composite_controller_config(controller="BASIC")
 # 4yQo6f3Z
 
 class RewardPrinter(BaseCallback):
@@ -44,7 +44,7 @@ def make_door_env():
     env = suite.make(
         env_name="Door", 
         robots="Panda",          
-        controller_configs=config,
+        # controller_configs=config,
         has_renderer=False,
         has_offscreen_renderer=False,
         use_camera_obs=False,
@@ -56,6 +56,7 @@ def make_door_env():
     )
     
     gym_env = GymWrapper(env)
+    gym_env = Monitor(gym_env)
     return gym_env
 
 def parse_args():
@@ -98,9 +99,10 @@ def main():
     callback = RewardPrinter()
     print(f"Training SAC on STACK environment for 2mil timesteps...")
 
-    model.learn(total_timesteps=3000000, callback=callback)
-    model.save('PPO_Door_3mill')
-    # PPO 125 is 10 million door
+    model.learn(total_timesteps=10000000, callback=callback)
+    model.save('PPO_Door_10mill')
+    # PPO 131 is 10 million door
+    # PPO 130 is 3 million door
 
     print("Testing trained model...")
     obs = vec_env.reset()
