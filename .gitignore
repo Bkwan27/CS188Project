@@ -1,3 +1,4 @@
-ppo_lift.zip
 ppo_lift_tb/
+sac_lift_tb/
 __pycache__/
+MUJOCO_LOG.TXT
