@@ -6,3 +6,5 @@ __pycache__/
 MUJOCO_LOG.TXT
 runs.txt
 .DS_Store
+*.csv
+*.pdf

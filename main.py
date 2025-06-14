@@ -79,7 +79,7 @@ def parse_args():
     parser.add_argument('--reward_shaping', action='store_true', help="Enable reward shaping")
     parser.add_argument('--no_reward_shaping', dest='reward_shaping', action='store_false', help="Disable reward shaping")
     parser.set_defaults(reward_shaping=True)
-    parser.add_argument('--checkpoint', type=str, default="SAC_lift_dense_1mil.zip", help="Checkpoint file to load for training")
+    parser.add_argument('--checkpoint', type=str, help="Checkpoint file to load for training")
     parser.add_argument('--timesteps', type=int, default=500_000, help="Number of training timesteps")
 
     return parser.parse_args()

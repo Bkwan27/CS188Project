@@ -45,6 +45,7 @@ def make_door_env():
 def parse_args():
     parser = ArgumentParser()
     parser.add_argument('--task', type=str, choices=['lift', 'door'], default='lift', help="Task to train on")
+    parser.add_argument('--checkpoint', type=str, required=True, help="Checkpoint file to load for evaluation")
     return parser.parse_args()
 
 def main():
@@ -55,7 +56,7 @@ def main():
     elif args.task == 'door':
         vec_env = DummyVecEnv([make_door_env for _ in range(num_env)])
 
-    model = PPO.load("final_runs/PPO_door_dense_3mil.zip", env=vec_env)
+    model = PPO.load("demos/PPO_door_dense_3mil.zip", env=vec_env)
 
     obs = vec_env.reset()
     episode, ep_return, ep_len = 1, 0.0, 0
