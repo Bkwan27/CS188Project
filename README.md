@@ -14,7 +14,7 @@ pip install -r requirements.txt
 
 This will install all necessary packages, including robosuite and reinforcement learning libraries.
 
-**NOTE: If you are on a Mac, run all files using `mjpython` instead of `python`.**
+**NOTE: If you are not on a Mac, run all files using `python` instead of `mjpython`.**
 
 ## Project Structure and Code
 ### Soft Actor-Critic (SAC)
@@ -34,7 +34,7 @@ To train a model, run `train.py` with the following flags:
 
 Now run:
 ```
-python main.py
+mjpython main.py
 ```
 
 #### Evaluation
@@ -45,10 +45,39 @@ To test your model after training, run `eval.py` with the following flags:
 - `--checkpoint`: the path of the model you want to evaluate
   - Required: True
     - E.g. `"demos/SAC_lift_dense_1mil.zip"`
+- `--model`: the type of model you're evaluating
+  - Choices: SAC, PPO
+    - Default: SAC
 
 Now run:
 ```
-python eval.py
+mjpython eval.py
+```
+
+**You may also run our demo models:**
+SAC: lift, sparse, 1 million iterations
+```
+mjpython eval.py --task lift --checkpoint demos/SAC_lift_sparse_1mil.zip --model SAC
+```
+SAC: lift, dense, 1 million iterations
+```
+mjpython eval.py --task lift --checkpoint demos/SAC_lift_dense_1mil.zip --model SAC
+```
+PPO: lift, sparse, 10 million iterations
+```
+mjpython eval.py --task lift --checkpoint demos/PPO_lift_sparse_10mil.zip --model PPO
+```
+PPO: lift, dense, 10 million iterations
+```
+mjpython eval.py --task lift --checkpoint demos/PPO_lift_dense_10mil.zip --model PPO
+```
+SAC: door, dense, 1 million iterations
+```
+mjpython eval.py --task door --checkpoint demos/SAC_door_dense_1mil.zip --model SAC
+```
+PPO: door, dense, 3 million iterations
+```
+mjpython eval.py --task door --checkpoint demos/PPO_door_dense_3mil.zip --model PPO
 ```
 
 ### Proximal Policy Optimization (PPO)
@@ -65,7 +94,7 @@ To evaluate your own trained model:
 2. Run the script:
 
    ```bash
-   python eval.py
+   mjpython eval.py
    ```
 
 ## Notes
