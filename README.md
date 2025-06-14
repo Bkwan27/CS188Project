@@ -1,11 +1,46 @@
-﻿# CS188Project
+Sure! Here's a cleaner and more professional version of your README:
 
-## Environment
+````markdown
+# CS188 Project
 
-It is recommended to activate your own anaconda or python virtual environment. For example, you can run "conda create -n robosuite-env python=3.8 -y". Then do "pip install -r requirements.txt" and you should be able to run the code.
+## Environment Setup
 
-## Code
- 
-PPO training code, reward function, and evaluation is in the PPO branch. Dense reward function for PPO is under PPO branch in env.py. Training code for lift task PPO is under PPO branch in main.py. Training code for door task PPO is under PPO branch in door_main.py.
+We recommend using a dedicated Anaconda or Python virtual environment for managing dependencies.
 
-If you want to evaluate your trained RL algorithm replace the zip file in model.save in eval.py with the one you want to evaluate and run "python eval.py".
+To get started:
+
+```bash
+conda create -n robosuite-env python=3.8 -y
+conda activate robosuite-env
+pip install -r requirements.txt
+````
+
+This will install all necessary packages, including robosuite and reinforcement learning libraries.
+
+## Project Structure and Code
+
+The core PPO implementation, custom reward functions, and evaluation scripts are located in the `PPO` branch.
+
+* **Dense Reward Function**: Defined in `env.py` under the `PPO` branch.
+* **Lift Task Training**: See `main.py` for PPO training on the Lift environment.
+* **Door Task Training**: See `door_main.py` for PPO training on the Door environment.
+* **Evaluation**: Use `eval.py` to evaluate a trained PPO model.
+
+To evaluate your own trained model:
+
+1. Replace the file path in `model.load(...)` inside `eval.py` with the path to your `.zip` model.
+2. Run the script:
+
+   ```bash
+   python eval.py
+   ```
+
+## Notes
+
+Make sure you are in the correct branch (`PPO`) to access all relevant code for training and evaluation.
+
+```
+
+Let me know if you want to add usage examples, results visuals, or a section on experiments!
+```
+
