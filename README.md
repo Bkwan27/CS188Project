@@ -1,6 +1,3 @@
-Sure! Here's a cleaner and more professional version of your README:
-
-````markdown
 # CS188 Project
 
 ## Environment Setup
@@ -13,7 +10,7 @@ To get started:
 conda create -n robosuite-env python=3.8 -y
 conda activate robosuite-env
 pip install -r requirements.txt
-````
+```
 
 This will install all necessary packages, including robosuite and reinforcement learning libraries.
 
@@ -38,9 +35,4 @@ To evaluate your own trained model:
 ## Notes
 
 Make sure you are in the correct branch (`PPO`) to access all relevant code for training and evaluation.
-
-```
-
-Let me know if you want to add usage examples, results visuals, or a section on experiments!
-```
 
