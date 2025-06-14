@@ -7,14 +7,14 @@ We recommend using a dedicated Anaconda or Python virtual environment for managi
 To get started:
 
 ```bash
-conda create -n robosuite-env python=3.8 -y
+conda create -n robosuite-env python=3.10 -y
 conda activate robosuite-env
 pip install -r requirements.txt
 ```
 
 This will install all necessary packages, including robosuite and reinforcement learning libraries.
 
-**NOTE: If you are not on a Mac, run all files using `python` instead of `mjpython`.**
+**NOTE: If you are not on a Mac, run all files using `python` instead of `mjpython`. Also, comment out this line `os.environ.setdefault("MUJOCO_GL", "egl")` in eval.py if you are on windows**
 
 ## Project Structure and Code
 ### Soft Actor-Critic (SAC)
