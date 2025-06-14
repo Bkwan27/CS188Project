@@ -2,7 +2,7 @@
 
 ## Environment
 
-It is recommended to activate your own anaconda or python virtual environment. Then do 'pip install -r requirements.txt' and you should be able to run the code.
+It is recommended to activate your own anaconda or python virtual environment. For example, you can run "conda create -n robosuite-env python=3.8 -y". Then do "pip install -r requirements.txt" and you should be able to run the code.
 
 ## Code
  
