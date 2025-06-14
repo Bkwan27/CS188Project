@@ -1,35 +1,20 @@
-"""
-Roll out a saved Stable-Baselines3 PPO model on Robosuite’s Lift task
-with live rendering.
-
-Usage
------
-$ conda activate lift_rl          # or whatever env you built
-$ python run_saved_ppo.py         # make sure ppo_lift.zip is in CWD
-"""
-
 import os, time, numpy as np
-from stable_baselines3 import PPO
+from stable_baselines3 import PPO, SAC
 import robosuite as suite
 from env import RewardOverrideWrapper
 from robosuite.wrappers import GymWrapper
 from stable_baselines3.common.vec_env import DummyVecEnv
+from argparse import ArgumentParser
 
 import numpy as np, sys
 sys.modules['numpy._core'] = np.core
 sys.modules['numpy._core.numeric'] = np.core.numeric
-# --------------------------------------------------------------------
-# 0) (Windows) make sure MuJoCo picks a GUI-capable backend
-#    "glfw" works on Linux/Mac too; use "wgl" if glfw gives a black window
-os.environ.setdefault("MUJOCO_GL", "glfw")
-# print("hello")
-# --------------------------------------------------------------------
-# 1) Build *one* Lift env exactly like the training one, but with a viewer
-def make_lift_env(render=True):
-    env = suite.make(
-        env_name="Lift", 
+os.environ.setdefault("MUJOCO_GL", "egl")
+
+def make_lift_env():
+    env = RewardOverrideWrapper(
         robots="Panda",  
-        has_renderer=render,
+        has_renderer=True,
         has_offscreen_renderer=False,
         use_camera_obs=False,
         use_object_obs=True,
@@ -37,46 +22,73 @@ def make_lift_env(render=True):
         control_freq=20,
         horizon=500,
     )
-    #env = Monitor(env)          # <- adds episode reward/length to info dict
+    env = GymWrapper(env)
+    return env
+
+def make_door_env():
+    env = suite.make(
+        env_name="Door", 
+        robots="Panda",
+        has_renderer=True,
+        has_offscreen_renderer=False,
+        use_camera_obs=False,
+        use_object_obs=True,
+        reward_shaping=True,
+        control_freq=20,
+        horizon=500,    
+        reward_scale=1.0,
+    )
+    
     gym_env = GymWrapper(env)
-    gym_env = RewardOverrideWrapper(gym_env)
     return gym_env
 
-num_env=1
-vec_env = DummyVecEnv([make_lift_env for _ in range(num_env)])
+def parse_args():
+    parser = ArgumentParser()
+    parser.add_argument('--task', type=str, choices=['lift', 'door'], default='lift', help="Task to train on")
+    parser.add_argument('--checkpoint', type=str, required=True, help="Checkpoint file to load for evaluation")
+    return parser.parse_args()
 
-# --------------------------------------------------------------------
-# 2) Load the policy (no need to pass env when we only want predict)
-model = PPO.load("ppo_lift.zip", env=vec_env)  # env helps SB3 sanity-check spaces
+def main():
+    args = parse_args()
+    num_env=1
+    if args.task == 'lift':
+        vec_env = DummyVecEnv([make_lift_env for _ in range(num_env)])
+    elif args.task == 'door':
+        vec_env = DummyVecEnv([make_door_env for _ in range(num_env)])
 
-obs = vec_env.reset()
-episode, ep_return, ep_len = 1, 0.0, 0
+    model = PPO.load("demos/PPO_door_dense_3mil.zip", env=vec_env)
 
-print("Running saved policy — close the viewer window to stop.")
-try:
-    while True:
-        # 3) Policy → action
-        action, _ = model.predict(obs, deterministic=True)
+    obs = vec_env.reset()
+    episode, ep_return, ep_len = 1, 0.0, 0
 
-        # 4) Step the simulator
-        obs, rewards, dones, infos = vec_env.step(action)
-        ep_return += rewards[0]
-        ep_len += 1
+    print("Running saved policy — close the viewer window to stop.")
+    try:
+        while True:
+            # 3) Policy → action
+            action, _ = model.predict(obs, deterministic=True)
 
-        # 5) Render one frame (robosuite auto-renders when has_renderer==True,
-        #    but calling explicitly lets you slow the loop if you like)
-        vec_env.envs[0].render()
+            # 4) Step the simulator
+            obs, rewards, dones, infos = vec_env.step(action)
+            ep_return += rewards[0]
+            ep_len += 1
 
-        if dones[0]:
-            print(f"Episode {episode} | return = {ep_return:.3f} | length = {ep_len} steps")
-            obs = vec_env.reset()
-            episode  += 1
-            ep_return = 0.0
-            ep_len    = 0
+            # 5) Render one frame (robosuite auto-renders when has_renderer==True,
+            #    but calling explicitly lets you slow the loop if you like)
+            vec_env.envs[0].render()
 
-        # Optional: cap FPS so it doesn’t run too fast
-        time.sleep(1 / 60)          # 60 Hz viewer
-except KeyboardInterrupt:
-    print("Interrupted by user.")
-finally:
-    vec_env.close()
+            if dones[0]:
+                print(f"Episode {episode} | return = {ep_return:.3f} | length = {ep_len} steps")
+                obs = vec_env.reset()
+                episode  += 1
+                ep_return = 0.0
+                ep_len    = 0
+
+            # Optional: cap FPS so it doesn’t run too fast
+            time.sleep(1 / 60)          # 60 Hz viewer
+    except KeyboardInterrupt:
+        print("Interrupted by user.")
+    finally:
+        vec_env.close()
+
+if __name__ == "__main__":
+    main()
