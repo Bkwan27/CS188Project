@@ -1,5 +1,8 @@
 ppo_lift_tb/
+ppo_door_tb/
 sac_lift_tb/
+sac_door_tb/
 __pycache__/
 MUJOCO_LOG.TXT
 runs.txt
+.DS_Store
